@@ -49,6 +49,7 @@ public class SimHandler {
                 stationary = r2;
                 moving = r1;
             }
+
             int[] stationaryCords = new int[2];
             stationaryCords[0] = stationary.getX();
             stationaryCords[1] = stationary.getY();
@@ -59,6 +60,12 @@ public class SimHandler {
             // Colission triggered when idle robot on path of moving robot
             for (int i = 0; i < iterationNumber; i++) {
                 if (Arrays.equals(moving.getPathTiles().get(i), stationaryCords)) {
+
+                    if(stationary.getX() == moving.getTargetX() && stationary.getY() == moving.getTargetY() && i > 0){
+                        System.out.println("Collision with Idle!!! Idle on Target ");
+                        int[] prevCords = moving.getPathTiles().get(i-1);
+                        stationary.getOrganiser().moveRobotAway(stationary, Sim.calcTileNum(prevCords[0], prevCords[1]));
+                    }
                     System.out.println("Collision with Idle!!! ");
                     moving.obstacleOnPath(i);
                 }
@@ -82,10 +89,7 @@ public class SimHandler {
                     //System.out.println("Collision Danger: " + tempRobot.getNumber() + ", " + tempRobot2.getNumber());
                     checkCollision(tempRobot, tempRobot2);
                 }
-
             }
-
-
         }
     }
 

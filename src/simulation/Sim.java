@@ -1,5 +1,6 @@
 package simulation;
 
+import simulation.Data.DBHandler;
 import simulation.Window;
 import java.awt.*;
 import java.awt.image.BufferStrategy;
@@ -16,59 +17,68 @@ public class Sim extends Canvas implements Runnable {
     private Random r;
     private SimHandler simulationhandler;
     ControlWindow cWindow;
+    DistributionWindow dWindow;
     Organiser organiser;
+    DBHandler dbHandler;
+    Thread dWinThread;
 
     private long startTime = System.currentTimeMillis();
 
     public Sim(){
         // backend
         simulationhandler = new SimHandler();
-        organiser = new Organiser();
+        dbHandler = new DBHandler();
+        organiser = new Organiser(dbHandler);
+
+        // HELPER generatiung random orders
+        /*
+        for (int i = 0; i < 10; i++) {
+            organiser.addOrder(orderGenerator());
+        }
+
+         */
+        organiser.addOrder(new int[]{2});
 
         // window setup
         new Window(WIDTH+16, HEIGHT+38, "Logistics Simulation", this);
         cWindow = new ControlWindow(this, organiser);
+
+        dWinThread = new DistributionThread().setDBhandler(dbHandler);
+        dWinThread.start();
+
         setupTiles();
 
-        // HELPER generating random job array
-        for (int i = 0; i < 10; i++) {
-            organiser.addJobPending(generateJobArray());
-        }
+        //organiser.addOrder(new int[]{6});
+        //organiser.addJobPending(new int[]{70,0,20,0,9});
+        //inventoryManager.insertItem(6);
 
         // TESTING PURPOSE manual robot initiation
-        Robot r = new Robot(10, 10, ID.Robot, 4, organiser);
-        Robot r2 = new Robot(100, 100, ID.Robot, 5, organiser);
-        Robot r3 = new Robot(130, 80, ID.Robot, 6 , organiser);
-        Robot r4 = new Robot(700, 0, ID.Robot, 7 , organiser);
-        Robot r5 = new Robot(520, 0, ID.Robot, 8 , organiser);
+        Robot r = new Robot(100, 200, ID.Robot, 4, organiser, dbHandler);
+        Robot r2 = new Robot(100, 100, ID.Robot, 5, organiser, dbHandler);
+        Robot r3 = new Robot(130, 80, ID.Robot, 6 , organiser, dbHandler);
+        Robot r4 = new Robot(700, 0, ID.Robot, 7 , organiser, dbHandler);
+        Robot r5 = new Robot(520, 0, ID.Robot, 8 , organiser, dbHandler);
         simulationhandler.addRobot(r);
         simulationhandler.addRobot(r2);
         simulationhandler.addRobot(r3);
         simulationhandler.addRobot(r4);
         simulationhandler.addRobot(r5);
 
-        organiser.addInUse(r);
-        organiser.addInUse(r2);
-        organiser.addInUse(r3);
-        organiser.addInUse(r4);
+        organiser.addInIdle(r);
+        organiser.addInIdle(r2);
+        organiser.addInIdle(r3);
+        organiser.addInIdle(r4);
         organiser.addInIdle(r5);
 
-        simulationhandler.getRobot().get(0).newRoute(700, 700, simulationhandler.getRobot().get(0).getX(), simulationhandler.getRobot().get(0).getY());
-        simulationhandler.getRobot().get(1).newRoute(700, 300, simulationhandler.getRobot().get(1).getX(), simulationhandler.getRobot().get(1).getY());
-        simulationhandler.getRobot().get(2).newRoute(200, 700, simulationhandler.getRobot().get(2).getX(), simulationhandler.getRobot().get(2).getY());
-        simulationhandler.getRobot().get(3).newRoute(300, 0, simulationhandler.getRobot().get(3).getX(), simulationhandler.getRobot().get(3).getY());
+        //simulationhandler.getRobot().get(0).newRoute(700, 700, simulationhandler.getRobot().get(0).getX(), simulationhandler.getRobot().get(0).getY());
+        //simulationhandler.getRobot().get(1).newRoute(700, 300, simulationhandler.getRobot().get(1).getX(), simulationhandler.getRobot().get(1).getY());
+        //simulationhandler.getRobot().get(2).newRoute(200, 700, simulationhandler.getRobot().get(2).getX(), simulationhandler.getRobot().get(2).getY());
+        //simulationhandler.getRobot().get(3).newRoute(300, 0, simulationhandler.getRobot().get(3).getX(), simulationhandler.getRobot().get(3).getY());
+
 
         organiser.parseIdleRobots();
+        organiser.clearInserterAndCollectorTiles();
         cWindow.setupList();
-        /*
-        LinkedList<Tile> tiles = (LinkedList<Tile>) simulationhandler.getTiles().clone();
-
-        for(int i = 0; i < simulationhandler.getTiles().size(); i++) {
-            System.out.println(tiles.get(i).getNumber()+ "," + tiles.get(i).x+ "," + tiles.get(i).y);
-        }
-        */
-
-
 
     }
 
@@ -78,7 +88,11 @@ public class Sim extends Canvas implements Runnable {
             for (int j = 0; j < WIDTH/10; j++) {
                 int num = i * 80 + j;
                 Tile t = new Tile(i*10,j*10, ID.Tile, num);
-                simulationhandler.addTile(t);
+                //simulationhandler.addTile(t);
+                // ONLY SETUP PURPOSE !!! dbHandler.addTile(num);
+                //for (int k = 0; k < 3; k++) {
+                    //inventoryManager.newBox(k, num);
+                //}
             }
 
         }
@@ -93,6 +107,7 @@ public class Sim extends Canvas implements Runnable {
     public synchronized void stop(){
         try{
             thread.join();
+            dWinThread.join();
             running = false;
         }catch (Exception e){
             e.printStackTrace();
@@ -125,6 +140,8 @@ public class Sim extends Canvas implements Runnable {
                 frames = 0;
                 // update Tasks and Control Window
                 organiser.parseIdleRobots();
+                organiser.processOrders();
+
                 cWindow.setupList();
             }
         }
@@ -163,9 +180,29 @@ public class Sim extends Canvas implements Runnable {
     // NOT CHECKED HELPER FUNCTION returns Tile number based on coordinates
     public static int calcTileNum(int x, int y){
         int n;
-        n = (x/10) * 80 + (y/10);
+        n = (y/10) * 80 + (x/10);
         return n;
     }
+
+    public static int[] calcTileCords(int tileID){
+        int y = (tileID/80) * 10;
+        int x = (tileID%80) * 10;
+        return new int[]{x,y};
+    }
+    /*
+    public static int calcDirOfTwoCords(int[] c1, int[] c2){
+        if(c1[0] < c2[0] && c1[1] == c2[1]){
+            return 3;
+        }else if(c1[0] > c2[0] && c1[1] == c2[1]){
+            return 1;
+        }else if(c1[0] == c2[0] && c1[1] < c2[1]){
+            return 0;
+        }else if(c1[0] == c2[0] && c1[1] > c2[1]){
+            return 2;
+        }
+    }
+
+     */
 
     // HELPER FUNCTION generates random jobs
     public static int[] generateJobArray(){
@@ -176,6 +213,16 @@ public class Sim extends Canvas implements Runnable {
         }
         return arr;
     }
+    // HELPER FUNCTION generates a random order
+    public int[] orderGenerator(){
+        Random random = new Random();
+        int[] orderArray = new int[random.nextInt(4)+1];
+        for (int i = 0; i < orderArray.length; i++) {
+            orderArray[i] = random.nextInt(261) + 1;
+        }
+        return orderArray;
+    }
+
     // HELPER FUNCTION keeps var from exceeding a certain range
     public static int clamp(int var, int min, int max){
         if(var >= max)

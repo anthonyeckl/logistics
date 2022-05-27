@@ -1,5 +1,7 @@
 package simulation;
 
+import simulation.Data.DBHandler;
+
 import java.awt.*;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -26,16 +28,22 @@ public class Robot extends SimObject {
     private int number;
     // sim organiser
     Organiser organiser;
+    // current Job
+    private Job currentJob;
     //wait start time
     private long waitStartTime;
     private boolean doWait = false;
     // following Route
-    int[] followingRoute = new int[4];
+    //int[] followingRoute = new int[4];
 
-    public Robot(int x, int y, ID id, int number, Organiser organiser){
+    // passing var
+    private DBHandler dbHandler;
+
+    public Robot(int x, int y, ID id, int number, Organiser organiser, DBHandler dbHandler){
         super(x, y, id);
         this.number = number;
         this.organiser = organiser;
+        this.dbHandler = dbHandler;
         setVelX(2);
         setVelY(2);
         //setPathToTarget(calcPathToTarget(300, 270));
@@ -53,26 +61,7 @@ public class Robot extends SimObject {
     }
 
     public void newJob(int[] jobCords){
-        int fromX = jobCords[0];
-        int fromY = jobCords[1];
-        int toX = jobCords[2];
-        int toY = jobCords[3];
-        // if the robot is not already on the from location
-        if(fromX != x && fromY != y){
-            // two different routes
-            int[] transitRoute = {fromX, fromY, x, y};
-            int[] transportRoute = {toX, toY, fromX, fromY};
-            // setting the following route of the robot ti the realtransport mission
-            followingRoute = transportRoute.clone();
-            // beginn with transit
-            this.newRoute(transitRoute[0],transitRoute[1],transitRoute[2],transitRoute[3]);
-            this.setTaskTransit();
-        }else{
-            // if the robot already is on the from location it directly starts with the transport
-            this.newRoute(toX, toY, x, y);
-            this.setTaskTransport();
-        }
-
+        this.currentJob = new Job(jobCords, this, organiser);
     }
 
     // new Destination
@@ -257,19 +246,7 @@ public class Robot extends SimObject {
                     else if (pathToTarget.size() == 1){
                         pathToTarget.remove(0);
                         setProximityTiles(calcProximityTiles(x,y));
-                        // depending on what the task was, the following actions are initiated
-                        if(task.equals("TRANSPORT")){
-                            setTaskIdle();
-                            organiser.removeInUse(this);
-                            organiser.addInIdle(this);
-                            targetX = -1;
-                            targetY = -1;
-                        } else if(task.equals("TRANSIT")){
-                            setTaskTransport();
-                            this.newRoute(followingRoute[0],followingRoute[1],followingRoute[2],followingRoute[3]);
-                            this.followingRoute = new int[]{-1, -1, -1, -1};
-                        }
-
+                        currentJob.reachedEndpoint();
                     }
                 }
             }
@@ -295,6 +272,14 @@ public class Robot extends SimObject {
 
 
     }
+    public void idleMode(){
+        setTaskIdle();
+        organiser.removeInUse(this);
+        organiser.addInIdle(this);
+        targetX = -1;
+        targetY = -1;
+    }
+
     // calculating the proximity Tiles 5x5 area around the robot
     public ArrayList<int[]> calcProximityTiles(int x, int y){
         ArrayList<int[]> pTiles = new ArrayList<>();
@@ -400,6 +385,18 @@ public class Robot extends SimObject {
         return task;
     }
 
+    public int getTargetX() {
+        return targetX;
+    }
+
+    public int getTargetY() {
+        return targetY;
+    }
+
+    public Organiser getOrganiser() {
+        return organiser;
+    }
+
     public void setTaskIdle(){
         this.task = "IDLE";
     }
@@ -408,6 +405,10 @@ public class Robot extends SimObject {
     }
     public void setTaskTransport(){
         this.task = "TRANSPORT";
+    }
+
+    public DBHandler getDbHandler() {
+        return dbHandler;
     }
 
     // GETTERS AND SETTERS ----------------- END ----------------------
