@@ -13,7 +13,7 @@ public class DBHandler {
 
     public DBHandler() {
         // DB Adress
-        String jdbcUrl = "jdbc:sqlite:/E:\\Java\\logistics\\src\\simulation\\Data\\Logistics_Simulation_Database.db";
+        String jdbcUrl = "jdbc:sqlite:/D:\\Java\\logistics\\src\\simulation\\Data\\Logistics_Simulation_Database.db";
         try {
             Class.forName("org.sqlite.JDBC");
         } catch (ClassNotFoundException e) {

@@ -28,6 +28,9 @@ public class Organiser {
     // inserter/ collector tiles
     private ArrayList<Integer> inserterTileIDArray = new ArrayList<>();
     private ArrayList<Integer> collectorTileIDArray = new ArrayList<>();
+    // log messages
+    private ArrayList<String> logMessages = new ArrayList<>();
+
 
     public Organiser(DBHandler dbHandler){
         this.dbHandler = dbHandler;
@@ -54,7 +57,8 @@ public class Organiser {
             takenOrderID++;
             orderObjects.add(tmpOrder);
             orderList.remove(0);
-            System.out.println("ORGANIZER: new Order processed orderID:" + tmpOrder.getOrderID());
+            //System.out.println("ORGANIZER: new Order processed orderID:" + tmpOrder.getOrderID());
+            logMessages.add("500: ORGANIZER: new Order processed orderID:" + tmpOrder.getOrderID());
         }
     }
     // when the box arrives at the collector the function processes the order by removing the needed item
@@ -96,18 +100,31 @@ public class Organiser {
             if( occ > 0){
                 moveBoxAwayByTile(collectorTileIDArray.get(i));
             }
+            //moves idle robots away
+            for (int j = 0; j < inIdle.size(); j++) {
+                if(Sim.calcTileNum(inIdle.get(j).getX(),inIdle.get(j).getY()) == collectorTileIDArray.get(i)){
+                    moveIdleRobotAway(inIdle.get(j));
+                }
+            }
         }
         //Inserter Tiles
         for (int i = 0; i < inserterTileIDArray.size(); i++) {
             int occ = dbHandler.getOccupationfromTilesByTileID(inserterTileIDArray.get(i));
-            if( occ > 0){
+            if( occ > 1){
                 moveBoxAwayByTile(inserterTileIDArray.get(i));
+            }
+            // moves idle robots away
+            for (int j = 0; j < inIdle.size(); j++) {
+                if(Sim.calcTileNum(inIdle.get(j).getX(),inIdle.get(j).getY()) == inserterTileIDArray.get(i)){
+                    moveIdleRobotAway(inIdle.get(j));
+                }
             }
         }
     }
-
+    // used to move away idle Robots on the path of moving robots
     public void moveRobotAway(Robot robot, int fromTileID){
         // calculating the tiles around the stationary robot
+        // fromTileID: direction the moving robot is coming from
         int tileIDRobot = Sim.calcTileNum(robot.getX(), robot.getY());
         int[] nearbyTiles = calcNearbyTileIDs(tileIDRobot, 1);
         // removing the tile thats on the path of the moving robot
@@ -128,6 +145,47 @@ public class Organiser {
         int[] jobArray = new int[]{robot.getX(),robot.getY(),tarTileCords[0], tarTileCords[1], -1};
         robot.newJob(jobArray);
 
+    }
+
+    // used for moving robots off the collector and inserter Tiles
+    private void moveIdleRobotAway(Robot robot){
+        int tileIDRobot = Sim.calcTileNum(robot.getX(), robot.getY());
+        int[] nearbyTiles = calcNearbyTileIDs(tileIDRobot, 2);
+        // number of tiles that will be deleted
+        int deleted = 0;
+
+        for (int i = 0; i < nearbyTiles.length; i++) {
+            // collerctortilecheck
+            for (int j = 0; j < collectorTileIDArray.size(); j++) {
+                if(nearbyTiles[i] == collectorTileIDArray.get(j)){
+                    nearbyTiles[i] = -1;
+                    deleted += 1;
+                }
+            }
+            // insertertilecheck
+            for (int j = 0; j < inserterTileIDArray.size(); j++) {
+                if(nearbyTiles[i] == inserterTileIDArray.get(j)){
+                    nearbyTiles[i] = -1;
+                    deleted += 1;
+                }
+            }
+        }
+        int[] finalArr = new int[nearbyTiles.length-deleted];
+        int c = 0;
+        for (int i: nearbyTiles){
+            if(i != -1){
+                finalArr[c] = i;
+                c++;
+            }
+        }
+        // pucking one of the availiable tiles index 1 is randomly assigned no system to pick the tile the robot moves to
+        int tarTile = finalArr[1];
+        int[] tarTileCords = Sim.calcTileCords(tarTile);
+        inIdle.remove(robot);
+        inUse.add(robot);
+        // boxID -1 stands for movement and no box shpuld be moved
+        int[] jobArray = new int[]{robot.getX(),robot.getY(),tarTileCords[0], tarTileCords[1], -1};
+        robot.newJob(jobArray);
     }
 
     // ITEM INSERTION
@@ -234,14 +292,24 @@ public class Organiser {
                 dbHandler.addItemToBoxByItemID(itemID, inserterBox);
                 // Box Utilization update
                 dbHandler.updateBoxUtilizationByBoxID(inserterBox, insBoxUtil+1);
+                logMessages.add("400: Inserted (ItemID) :"+ itemID + " Into (BoxID):"+ inserterBox);
                 return true;
             }else{
+                logMessages.add("800: Box full on inserter Tile");
                 moveBoxAwayByTile(inserterTileIDArray.get(0));
+                //System.out.println("Box full on inserter Tile");
+                logMessages.add("800: Box requested to inserter Tile");
+                requestBoxByTileID(inserterTileIDArray.get(0));
+                //System.out.println("Box requested to inserter Tile");
                 return false;
             }
         }else{
             // job bring box to inserter
             requestBoxByTileID(inserterTileIDArray.get(0));
+            //System.out.println("No Box on inserter Tile");
+            //System.out.println("Box requested to inserter Tile");
+            logMessages.add("800: No Box on inserter Tile");
+            logMessages.add("800: Box requested to inserter Tile");
             return false;
         }
     }
@@ -351,5 +419,19 @@ public class Organiser {
 
     public ArrayList<int[]> getJobsPending() {
         return jobsPending;
+    }
+
+    public ArrayList<String> getLogMessages() {
+        return logMessages;
+    }
+
+    public void removeFirstLogMessage(){
+        logMessages.remove(0);
+    }
+
+    public void addLogMessage(String code, String message){
+        String logM = code + ": " + message;
+        logMessages.add(logM);
+
     }
 }

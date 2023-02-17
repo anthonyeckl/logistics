@@ -1,0 +1,39 @@
+import sqlite3
+import openpyxl
+import random
+
+wb = openpyxl.load_workbook("itemList.xlsx")
+sheet = wb.active
+allrs = []
+print(sheet["B2"].value)
+for i in range(262):
+    x = i+1
+    r = []
+    r.append(sheet.cell(row=x, column=1).value)
+    r.append(sheet.cell(row=x, column=2).value)
+    r.append(sheet.cell(row=x, column=3).value)
+    r.append(sheet.cell(row=x, column=4).value)
+    allrs.append(r)
+
+print(allrs)
+for i in range(262):
+    allrs[i][3] = 0
+    t = random.randint(1, 10)*2
+    allrs[i][3] = t
+print(allrs)
+
+
+name = "Logistics_Simulation_Database.db"
+basedb = sqlite3.connect(name)
+c = basedb.cursor()
+
+for i in range(262):
+
+    c.execute(
+                    "INSERT INTO Items VALUES (:ID, :ItemName, :ItemCategory, :ItemSize)",
+                    {"ID": allrs[i][0],"ItemName": allrs[i][1], "ItemCategory": allrs[i][2],
+                    "ItemSize": allrs[i][3]})
+
+basedb.commit()
+basedb.close()
+                             

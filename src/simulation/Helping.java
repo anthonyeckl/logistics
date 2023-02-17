@@ -1,5 +1,7 @@
 package simulation;
 
+import javax.print.DocFlavor;
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;

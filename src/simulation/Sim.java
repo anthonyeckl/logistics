@@ -6,6 +6,13 @@ import java.awt.*;
 import java.awt.image.BufferStrategy;
 import java.util.LinkedList;
 import java.util.Random;
+/*
+IDEAS:
+- fill with items (mabye boxes)
+- add additional inserters and collectors
+    - items of one order head to the same collector
+- distribution? equally sread? near collectors?
+ */
 
 public class Sim extends Canvas implements Runnable {
     //public static final int WIDTH = 640, HEIGHT = WIDTH / 12 *9;
@@ -37,7 +44,7 @@ public class Sim extends Canvas implements Runnable {
         }
 
          */
-        organiser.addOrder(new int[]{2});
+        //organiser.addOrder(new int[]{5});
 
         // window setup
         new Window(WIDTH+16, HEIGHT+38, "Logistics Simulation", this);
@@ -50,7 +57,6 @@ public class Sim extends Canvas implements Runnable {
 
         //organiser.addOrder(new int[]{6});
         //organiser.addJobPending(new int[]{70,0,20,0,9});
-        //inventoryManager.insertItem(6);
 
         // TESTING PURPOSE manual robot initiation
         Robot r = new Robot(100, 200, ID.Robot, 4, organiser, dbHandler);
@@ -75,10 +81,11 @@ public class Sim extends Canvas implements Runnable {
         //simulationhandler.getRobot().get(2).newRoute(200, 700, simulationhandler.getRobot().get(2).getX(), simulationhandler.getRobot().get(2).getY());
         //simulationhandler.getRobot().get(3).newRoute(300, 0, simulationhandler.getRobot().get(3).getX(), simulationhandler.getRobot().get(3).getY());
 
-
         organiser.parseIdleRobots();
         organiser.clearInserterAndCollectorTiles();
         cWindow.setupList();
+
+        //organiser.insertItem(44);
 
     }
 
@@ -141,7 +148,7 @@ public class Sim extends Canvas implements Runnable {
                 // update Tasks and Control Window
                 organiser.parseIdleRobots();
                 organiser.processOrders();
-
+                organiser.clearInserterAndCollectorTiles();
                 cWindow.setupList();
             }
         }

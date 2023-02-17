@@ -62,9 +62,11 @@ public class Order {
 
 
                 jobs.add(job);
-                System.out.println("Generated job for itemID: "+tempItemID+", orderID :"+ orderID);
+                //System.out.println("Generated job for itemID: "+tempItemID+", orderID :"+ orderID);
+                organiser.addLogMessage("500", "Generated job for itemID: "+tempItemID+", orderID :"+ orderID);
             }else{
-                System.out.println("NO ITEMS FOUND! itemID: "+tempItemID+", orderID :"+ orderID);
+                //System.out.println("NO ITEMS FOUND! itemID: "+tempItemID+", orderID :"+ orderID);
+                organiser.addLogMessage("900", "NO ITEMS FOUND! itemID: "+tempItemID+", orderID :"+ orderID);
             }
 
         }
@@ -80,7 +82,8 @@ public class Order {
             }
         }
         if (finished){
-            System.out.println("Order finished! orderID: "+orderID);
+            //System.out.println("Order finished! orderID: "+orderID);
+            organiser.addLogMessage("500", "Order finished! orderID: "+orderID);
             organiser.removeOrderObject(this);
         }
     }
@@ -113,7 +116,8 @@ public class Order {
             if(items[i] == itemID)
                 items[i] = -1;
         }
-        System.out.println("Item delivered! itemID: "+itemID +", orderID: "+orderID);
+        //System.out.println("Item delivered! itemID: "+itemID +", orderID: "+orderID);
+        organiser.addLogMessage("500", "Item delivered! itemID: "+itemID +", orderID: "+orderID);
         checkFinished();
     }
 }

@@ -1,7 +1,13 @@
 package simulation;
 
 import javax.swing.*;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyleContext;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -16,6 +22,10 @@ public class ControlWindow extends JFrame {
     JList<Object> listJobs;
     JList<Object> listOrdersOpen;
     JList<Object> listOrdersPending;
+
+    JTextPane log;
+
+    ArrayList<Color> logColors;
 
     public ControlWindow(Sim simulation, Organiser organiser){
         // main window setup
@@ -35,6 +45,16 @@ public class ControlWindow extends JFrame {
 
         // widgets setup
         int textFieldWidth = 200;
+
+        logColors = new ArrayList<>();
+        logColors.add(Color.RED);
+        logColors.add(Color.BLACK);
+        logColors.add(Color.GREEN);
+        logColors.add(Color.GREEN);
+        logColors.add(Color.BLACK);
+        logColors.add(Color.BLUE);
+        logColors.add(Color.BLACK);
+        logColors.add(Color.ORANGE);
 
         //String list[] ={"one", "two", "three","one", "two", "three","one", "two", "three","one", "two", "three","one", "two", "three",};
         JPanel panel1 = new JPanel();
@@ -98,6 +118,90 @@ public class ControlWindow extends JFrame {
         this.add(panel4);
         this.add(panel5);
 
+        JPanel controlPanel = new JPanel();
+        controlPanel.setLayout(new FlowLayout());
+
+        // cu 1
+        JPanel controlUnit1 = new JPanel();
+        controlUnit1.setBackground(new Color(255, 105, 105));
+        JLabel cuLabel1 = new JLabel("Insert Item (ID):");
+        controlUnit1.add(cuLabel1);
+        JTextField cuText1 = new JTextField();
+        cuText1.setPreferredSize(new Dimension(80,20));
+        controlUnit1.add(cuText1);
+        JButton cuButton1 = new JButton("Insert");
+        controlUnit1.add(cuButton1);
+        controlPanel.add(controlUnit1);
+
+        cuButton1.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                String text = cuText1.getText();
+                if(text.length() != 0 ){
+                    organiser.insertItem(Integer.parseInt(text));
+                }
+                cuText1.setText("");
+            }
+        });
+
+        // cu 2
+        JPanel controlUnit2 = new JPanel();
+        controlUnit2.setBackground(new Color(127, 255, 105));
+        JLabel cuLabel2 = new JLabel("Order Items (1,45,3):");
+        controlUnit2.add(cuLabel2);
+        JTextField cuText2 = new JTextField();
+        cuText2.setPreferredSize(new Dimension(80,20));
+        controlUnit2.add(cuText2);
+        JButton cuButton2 = new JButton("Order");
+        controlUnit2.add(cuButton2);
+        controlPanel.add(controlUnit2);
+
+        cuButton2.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                String text = cuText2.getText();
+                int[] items = Arrays.stream(text.split(",")).mapToInt(Integer::parseInt).toArray();
+                if(text.length() != 0 ){
+                    for (int i = 0; i < items.length; i++) {
+                        System.out.println(items[i]);
+                    }
+                    organiser.addOrder(items);
+                }
+                cuText2.setText("");
+            }
+        });
+
+        // cu 3
+        JPanel controlUnit3 = new JPanel();
+        controlUnit3.setBackground(new Color(105, 255, 185));
+        JLabel cuLabel3 = new JLabel("Move top Box from (TileID):");
+        controlUnit3.add(cuLabel3);
+        JTextField cuText3 = new JTextField();
+        cuText3.setPreferredSize(new Dimension(80,20));
+        controlUnit3.add(cuText3);
+        JLabel cuLabel3_2 = new JLabel("to");
+        controlUnit3.add(cuLabel3_2);
+        JTextField cuText3_2 = new JTextField();
+        cuText3_2.setPreferredSize(new Dimension(80,20));
+        controlUnit3.add(cuText3_2);
+        JButton cuButton3 = new JButton("Move");
+        controlUnit3.add(cuButton3);
+        controlPanel.add(controlUnit3);
+
+        this.add(controlPanel);
+
+        // Level	Value	Used for
+        //SEVERE	1000	Indicates some serious failure
+        //WARNING	900	    Potential Problem
+        //INFO	    800	    General Info
+        //CONFIG	700	    Configuration Info
+        //FINE	    500	    General developer info
+        //FINER	    400	    Detailed developer info
+        //FINEST	300	    Specialized Developer Info
+
+        log = new JTextPane();
+        JScrollPane pane = new JScrollPane(log);
+        pane.setPreferredSize(new Dimension(400,200));
+        this.add(pane);
+
         this.setVisible(true);
     }
 
@@ -143,5 +247,25 @@ public class ControlWindow extends JFrame {
         listOrdersPending.setListData(ordersPendingArrayList.toArray());
 
          */
+        ArrayList<String> logMessagesList = new ArrayList<>(organiser.getLogMessages());
+        for (int i = 0; i < logMessagesList.size(); i++) {
+            appendToPane(log, logMessagesList.get(i) + "\n", logColors.get(Integer.parseInt(logMessagesList.get(i).charAt(0)+"")-1));
+            organiser.removeFirstLogMessage();
+        }
+    }
+
+    private static void appendToPane( JTextPane tp, String msg, Color c)
+    {
+        StyleContext sc = StyleContext.getDefaultStyleContext();
+        AttributeSet aset = sc.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, c);
+
+        aset = sc.addAttribute(aset, StyleConstants.FontFamily, "Lucida Console");
+        aset = sc.addAttribute(aset, StyleConstants.Alignment, StyleConstants.ALIGN_JUSTIFIED);
+
+        //int len = tp.getDocument().getLength();
+        tp.setCaretPosition(0);
+        tp.setCharacterAttributes(aset, false);
+        tp.replaceSelection(msg);
+
     }
 }
